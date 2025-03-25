@@ -1,0 +1,151 @@
+require:
+  - rubocop-rails
+  - rubocop-rspec
+  - rubocop-performance
+
+AllCops:
+  TargetRubyVersion: 3.2
+  NewCops: enable
+  Exclude:
+    - 'db/schema.rb'
+    - 'bin/**/*'
+    - 'vendor/**/*'
+    - 'node_modules/**/*'
+
+# Style Configurations
+Style/Documentation:
+  Enabled: true
+
+Style/StringLiterals:
+  EnforcedStyle: single_quotes
+  ConsistentQuotesInMultiline: true
+
+Style/SymbolArray:
+  EnforcedStyle: percent
+  MinSize: 2
+
+Style/WordArray:
+  EnforcedStyle: percent
+  MinSize: 2
+
+Style/HashSyntax:
+  EnforcedStyle: ruby19
+
+Style/ClassAndModuleChildren:
+  EnforcedStyle: nested
+
+# Naming Configurations
+Naming/FileName:
+  Enabled: true
+
+Naming/MethodName:
+  EnforcedStyle: snake_case
+
+Naming/VariableName:
+  EnforcedStyle: snake_case
+
+Naming/ClassAndModuleCamelCase:
+  Enabled: true
+
+Naming/ConstantName:
+  Enabled: true
+
+# Metrics Configurations
+Metrics/ClassLength:
+  Max: 200
+  Exclude:
+    - 'test/**/*'
+    - 'spec/**/*'
+
+Metrics/ModuleLength:
+  Max: 200
+  Exclude:
+    - 'test/**/*'
+    - 'spec/**/*'
+
+Metrics/MethodLength:
+  Max: 20
+  Exclude:
+    - 'db/migrate/*'
+
+Metrics/BlockLength:
+  Max: 25
+  Exclude:
+    - 'config/**/*'
+    - 'db/migrate/*'
+    - 'spec/**/*'
+    - 'test/**/*'
+    - 'lib/tasks/**/*'
+
+Metrics/AbcSize:
+  Max: 20
+
+Metrics/CyclomaticComplexity:
+  Max: 10
+
+# Layout Configurations
+Layout/LineLength:
+  Max: 120
+  Exclude:
+    - 'db/migrate/*'
+    - 'config/**/*'
+
+Layout/MultilineMethodCallIndentation:
+  EnforcedStyle: indented
+
+Layout/ArgumentAlignment:
+  EnforcedStyle: with_fixed_indentation
+
+Layout/HashAlignment:
+  EnforcedHashRocketStyle: key
+  EnforcedColonStyle: key
+
+# Rails Configurations
+Rails/HasAndBelongsToMany:
+  Enabled: false
+
+Rails/HasManyOrHasOneDependent:
+  Enabled: true
+
+Rails/InverseOf:
+  Enabled: true
+
+Rails/UniqBeforePluck:
+  EnforcedStyle: aggressive
+
+Rails/FilePath:
+  EnforcedStyle: arguments
+
+# RSpec Configurations
+RSpec/DescribeClass:
+  Enabled: true
+
+RSpec/ExampleLength:
+  Max: 10
+
+RSpec/MultipleExpectations:
+  Max: 5
+
+RSpec/NestedGroups:
+  Max: 4
+
+RSpec/LetSetup:
+  Enabled: false
+
+# Performance Configurations
+Performance/Detect:
+  Enabled: true
+
+Performance/FlatMap:
+  Enabled: true
+
+Performance/RedundantMerge:
+  Enabled: true
+
+# Security Configurations
+Security/YAMLLoad:
+  Enabled: true
+
+# Bundler Configurations
+Bundler/OrderedGems:
+  Enabled: true 
