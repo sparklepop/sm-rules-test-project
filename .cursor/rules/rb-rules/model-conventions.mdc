@@ -1,0 +1,168 @@
+# Ruby Model Conventions
+
+## Overview
+This document outlines the standard structure and conventions for Ruby models in our projects.
+
+## Model Structure
+Follow this order for model contents:
+
+```ruby
+class User < ApplicationRecord
+  # 1. Constants
+  VALID_STATUSES = %w[active inactive pending].freeze
+  
+  # 2. Attributes
+  attribute :status, :string, default: 'pending'
+  
+  # 3. Extensions/Includes
+  include Searchable
+  extend Enumerize
+  
+  # 4. Relationships
+  belongs_to :organization
+  has_many :posts, dependent: :destroy
+  has_one :profile
+  
+  # 5. Validations
+  validates :email, presence: true, uniqueness: true
+  validates :status, inclusion: { in: VALID_STATUSES }
+  
+  # 6. Callbacks
+  before_validation :normalize_email
+  after_create :send_welcome_email
+  
+  # 7. Scopes
+  scope :active, -> { where(status: 'active') }
+  scope :recent, -> { order(created_at: :desc) }
+  
+  # 8. Delegations
+  delegate :name, to: :organization, prefix: true
+  
+  # 9. Class Methods
+  class << self
+    def search(term)
+      where('email ILIKE ?', "%#{term}%")
+    end
+  end
+  
+  # 10. Instance Methods
+  def full_name
+    [first_name, last_name].compact.join(' ')
+  end
+  
+  # 11. Private Methods
+  private
+  
+  def normalize_email
+    self.email = email.downcase.strip if email.present?
+  end
+  
+  def send_welcome_email
+    UserMailer.welcome_email(self).deliver_later
+  end
+end
+```
+
+## Best Practices
+
+### Constants
+- Place at the top of the file
+- Use `SCREAMING_SNAKE_CASE`
+- Always call `.freeze` on arrays and hashes
+- Use for configuration and lookup tables
+
+### Attributes
+- Use Rails attributes API for type casting
+- Define default values here rather than in database
+- Keep database-level defaults minimal
+
+### Extensions
+- Keep includes and extends grouped together
+- Document purpose of included modules
+- Prefer concerns over direct module inclusion
+
+### Relationships
+- Specify dependent option for `has_many`/`has_one`
+- Order: belongs_to, has_many, has_one, has_and_belongs_to_many
+- Use appropriate callbacks for relationship maintenance
+
+### Validations
+- Group related validations together
+- Use custom validators for complex validations
+- Avoid validation logic in callbacks
+
+### Callbacks
+- Use sparingly - prefer explicit method calls
+- Keep callback methods private
+- Avoid complex logic in callbacks
+- Consider using service objects for complex operations
+
+### Scopes
+- Use lambda syntax
+- Chain-able scopes preferred
+- Name clearly indicates the filtering being done
+
+### Class Methods
+- Use class << self block for multiple methods
+- Prefer scopes over class methods for queries
+- Document complex class methods
+
+### Instance Methods
+- Group related methods together
+- Public methods first, then protected, then private
+- Keep methods focused and single-purpose
+
+## Anti-patterns to Avoid
+
+1. Fat Models
+- Extract complex logic to service objects
+- Use concerns for shared functionality
+- Consider form objects for complex forms
+
+2. Callback Hell
+- Minimize use of callbacks
+- Use service objects for complex operations
+- Keep callbacks focused and simple
+
+3. Complex Queries in Models
+- Extract to query objects
+- Use scopes for simple queries
+- Consider view objects for complex data presentation
+
+4. Business Logic in Models
+- Extract to service objects
+- Use form objects for complex form logic
+- Consider command objects for complex operations
+
+## Testing Conventions
+
+```ruby
+RSpec.describe User do
+  # 1. Factory
+  subject(:user) { build(:user) }
+  
+  # 2. Attributes
+  it { is_expected.to have_db_column(:email).of_type(:string) }
+  
+  # 3. Relationships
+  it { is_expected.to belong_to(:organization) }
+  it { is_expected.to have_many(:posts).dependent(:destroy) }
+  
+  # 4. Validations
+  it { is_expected.to validate_presence_of(:email) }
+  
+  # 5. Scopes
+  describe '.active' do
+    it 'returns only active users' do
+      # test implementation
+    end
+  end
+  
+  # 6. Methods
+  describe '#full_name' do
+    it 'combines first and last name' do
+      # test implementation
+    end
+  end
+end
+``` 

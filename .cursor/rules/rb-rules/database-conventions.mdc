@@ -1,0 +1,265 @@
+# Ruby Database Conventions
+
+## Overview
+This document outlines the standard database conventions for Ruby on Rails projects.
+
+## Table Naming
+- Use plural form of the model name
+- Use snake_case
+- Be descriptive and clear
+- Use join table naming convention for many-to-many relationships
+
+```ruby
+# Good
+create_table :users
+create_table :blog_posts
+create_table :categories_products  # join table
+create_table :user_preferences
+
+# Bad
+create_table :user
+create_table :blogpost
+create_table :product_category_joins
+create_table :userprefs
+```
+
+## Column Naming
+- Use singular form
+- Use snake_case
+- Be descriptive and clear
+- Follow standard naming patterns for common columns
+
+```ruby
+# Good
+add_column :users, :first_name, :string
+add_column :users, :email, :string
+add_column :posts, :published_at, :datetime
+add_column :products, :price_cents, :integer
+
+# Bad
+add_column :users, :firstName, :string
+add_column :users, :mail, :string
+add_column :posts, :published, :datetime
+add_column :products, :price, :integer  # avoid storing money as float
+```
+
+## Foreign Keys
+- Use singular model name with `_id` suffix
+- Always add foreign key constraints
+- Add appropriate indices
+
+```ruby
+# Good
+add_reference :posts, :user, foreign_key: true, index: true
+add_reference :comments, :post, foreign_key: true, index: true
+
+# Bad
+add_column :posts, :user_id, :integer  # missing foreign key constraint
+add_reference :comments, :post  # missing foreign key and index
+```
+
+## Indices
+- Add indices for columns used in queries
+- Add unique indices for uniqueness validations
+- Add composite indices for combined queries
+- Consider partial indices for filtered queries
+
+```ruby
+# Good
+add_index :users, :email, unique: true
+add_index :posts, [:user_id, :created_at]
+add_index :products, :status, where: "status = 'active'"
+
+# Bad
+add_index :users, :created_at  # rarely queried alone
+add_index :posts, :user_id  # use add_reference instead
+```
+
+## Data Types
+- Use appropriate data types for the data
+- Use monetary types for currency
+- Use enum for status fields
+- Use proper date/time types
+
+```ruby
+# Good
+create_table :products do |t|
+  t.string :name, null: false
+  t.text :description
+  t.integer :price_cents, null: false
+  t.string :currency, null: false
+  t.datetime :published_at
+  t.boolean :featured, default: false
+  t.integer :status, default: 0  # for enum
+end
+
+# Bad
+create_table :products do |t|
+  t.string :name
+  t.string :description  # should be text for long content
+  t.float :price  # should use integer cents
+  t.string :published  # should use datetime
+  t.integer :featured  # should use boolean
+end
+```
+
+## Migrations
+- Use reversible migrations
+- Add appropriate null constraints
+- Add default values when appropriate
+- Use transaction blocks for data migrations
+
+```ruby
+# Good
+class AddStatusToUsers < ActiveRecord::Migration[7.0]
+  def change
+    add_column :users, :status, :string, null: false, default: 'pending'
+    add_index :users, :status
+  end
+end
+
+# Data Migration Example
+class BackfillUserNames < ActiveRecord::Migration[7.0]
+  def up
+    User.in_batches do |batch|
+      batch.each do |user|
+        user.update_column(:full_name, [user.first_name, user.last_name].join(' '))
+      end
+    end
+  end
+
+  def down
+    User.update_all(full_name: nil)
+  end
+end
+```
+
+## Schema Conventions
+- Use `id: :uuid` for primary keys when appropriate
+- Add timestamps to all tables
+- Use consistent character sets and collations
+- Add appropriate constraints
+
+```ruby
+# Good
+create_table :users, id: :uuid do |t|
+  t.string :email, null: false
+  t.string :name, null: false
+  t.jsonb :preferences, default: {}
+  t.timestamps
+  
+  t.index :email, unique: true
+  t.check_constraint "char_length(name) > 0"
+end
+```
+
+## Enum Definitions
+- Use plural form for enum name
+- Use singular form for values
+- Define in alphabetical order unless order matters
+- Add prefix when values might conflict
+
+```ruby
+# Good
+class Post < ApplicationRecord
+  enum status: {
+    draft: 0,
+    published: 1,
+    archived: 2
+  }
+  
+  enum visibility: {
+    private: 0,
+    public: 1
+  }, _prefix: true
+end
+
+# Usage
+post.published?
+post.visibility_public?
+```
+
+## Association Tables
+- Use plural form of both model names
+- Order table names alphabetically
+- Include timestamps when tracking is needed
+- Add appropriate indices
+
+```ruby
+# Good
+create_table :categories_products, id: false do |t|
+  t.references :category, null: false, foreign_key: true
+  t.references :product, null: false, foreign_key: true
+  t.timestamps
+  
+  t.index [:category_id, :product_id], unique: true
+end
+```
+
+## Performance Considerations
+- Add indices judiciously
+- Use counter caches for counts
+- Use appropriate data types
+- Consider partial indices
+- Use batch processing for large data sets
+
+```ruby
+# Good
+add_column :users, :posts_count, :integer, default: 0
+add_index :posts, :published_at, where: "published_at IS NOT NULL"
+add_index :products, :status, where: "status = 'active'"
+
+# Data Processing
+def self.process_inactive_users
+  User.where(status: 'inactive').in_batches do |batch|
+    batch.update_all(processed_at: Time.current)
+  end
+end
+```
+
+## Common Patterns
+
+### Soft Delete
+```ruby
+# In migration
+add_column :users, :deleted_at, :datetime
+add_index :users, :deleted_at
+
+# In model
+scope :active, -> { where(deleted_at: nil) }
+scope :deleted, -> { where.not(deleted_at: nil) }
+
+def soft_delete
+  update_column(:deleted_at, Time.current)
+end
+
+def restore
+  update_column(:deleted_at, nil)
+end
+```
+
+### Versioning
+```ruby
+create_table :versions do |t|
+  t.string :item_type, null: false
+  t.uuid :item_id, null: false
+  t.string :event, null: false
+  t.string :whodunnit
+  t.jsonb :object
+  t.datetime :created_at
+
+  t.index [:item_type, :item_id]
+end
+```
+
+### Hierarchical Data
+```ruby
+create_table :categories do |t|
+  t.string :name, null: false
+  t.references :parent, foreign_key: { to_table: :categories }
+  t.integer :position
+  t.timestamps
+
+  t.index [:parent_id, :position]
+end
+``` 

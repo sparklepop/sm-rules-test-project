@@ -1,0 +1,108 @@
+# Ruby Naming Conventions
+
+## Overview
+This document outlines the standard naming conventions for Ruby and Rails code in our projects.
+
+## File Naming
+- Use `snake_case` for file names: `user_profile.rb`, `authentication_service.rb`
+- Match file names to class/module names: `UserProfile` → `user_profile.rb`
+- Test files should end with `_spec.rb`: `user_profile_spec.rb`
+- Partial views start with underscore: `_form.html.erb`
+
+## Class and Module Names
+- Use `CamelCase` (also known as `PascalCase`)
+- Each word capitalized, no underscores
+- Name should reflect single responsibility principle
+
+```ruby
+class UserAuthentication
+class PaymentProcessor
+module AdminDashboard
+```
+
+## Method Names
+- Use `snake_case`
+- Verb-first naming for actions
+- Question mark suffix for boolean methods
+- Exclamation mark suffix for dangerous/mutating versions
+
+```ruby
+def calculate_total
+def user_exists?
+def save!
+def normalize_url
+```
+
+## Variable Names
+- Use `snake_case`
+- Clear, descriptive names
+- No single-letter names except in small blocks
+
+```ruby
+user_count = 0
+monthly_revenue = calculate_total
+users.each { |u| u.activate! }  # Single letter OK in small blocks
+```
+
+## Constant Names
+- Use `SCREAMING_SNAKE_CASE`
+- All letters capitalized, words separated by underscores
+- Place at the top of classes/modules
+
+```ruby
+VALID_STATUSES = %w[pending active inactive].freeze
+DEFAULT_CURRENCY = 'USD'.freeze
+MAX_ATTEMPTS = 3
+```
+
+## Boolean Methods and Variables
+- Use question mark suffix for methods
+- Prefix with verbs like `is_`, `has_`, `can_`
+- Be descriptive and unambiguous
+
+```ruby
+def active?
+def has_permission?
+is_admin = user.admin?
+can_edit = user.has_permission?(:edit)
+```
+
+## Acronyms
+- Capitalize all letters in acronyms
+- Keep acronyms together when camelcasing
+
+```ruby
+class JSONParser    # Not: JsonParser
+class APIClient     # Not: ApiClient
+class HTMLRenderer  # Not: HtmlRenderer
+```
+
+## Database
+- Table names: plural, `snake_case`
+- Column names: `snake_case`
+- Foreign keys: singular model name with `_id` suffix
+- Junction tables: combine both model names in plural
+
+```ruby
+create_table :user_profiles
+add_column :first_name
+belongs_to :user              # creates user_id
+create_table :categories_products  # junction table
+```
+
+## Environment Variables
+- Use `SCREAMING_SNAKE_CASE`
+- Be descriptive and namespaced when needed
+
+```ruby
+DATABASE_URL="postgresql://localhost:5432"
+STRIPE_API_KEY="sk_test_123"
+REDIS_CACHE_URL="redis://localhost:6379/0"
+```
+
+## Enforcing Conventions
+These conventions are enforced through:
+1. Rubocop configuration
+2. Code review guidelines
+3. CI/CD checks
+4. EditorConfig settings 

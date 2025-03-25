@@ -1,0 +1,275 @@
+# Ruby Testing Conventions
+
+## Overview
+This document outlines the standard testing conventions for Ruby and Rails projects using RSpec.
+
+## Directory Structure
+```
+spec/
+├── models/
+├── controllers/
+├── requests/
+├── services/
+├── factories/
+├── support/
+└── shared_examples/
+```
+
+## Test File Naming
+- Match the name of the file being tested
+- Append `_spec.rb` to the filename
+- Follow the same directory structure as the app
+
+```ruby
+# app/models/user.rb → spec/models/user_spec.rb
+# app/services/report_generator.rb → spec/services/report_generator_spec.rb
+```
+
+## Factory Naming and Structure
+```ruby
+# spec/factories/users.rb
+FactoryBot.define do
+  factory :user do
+    sequence(:email) { |n| "user#{n}@example.com" }
+    first_name { "John" }
+    last_name { "Doe" }
+    
+    # Named factories for different states
+    factory :admin_user do
+      admin { true }
+    end
+    
+    # Traits for composable attributes
+    trait :active do
+      status { 'active' }
+    end
+    
+    trait :with_posts do
+      after(:create) do |user|
+        create_list(:post, 3, user: user)
+      end
+    end
+  end
+end
+```
+
+## Example Groups and Descriptions
+```ruby
+RSpec.describe User do
+  # Use contexts to group related examples
+  context "when newly created" do
+    it "has a pending status"
+  end
+  
+  # Use describe for methods
+  describe "#full_name" do
+    it "combines first and last name"
+  end
+  
+  # Use .method_name for class methods
+  describe ".search" do
+    it "finds users by email"
+  end
+end
+```
+
+## Best Practices
+
+### 1. Test Setup
+```ruby
+RSpec.describe User do
+  # Use let for memoized helper methods
+  let(:user) { create(:user) }
+  let(:admin) { create(:admin_user) }
+  
+  # Use let! when you need the code to execute immediately
+  let!(:posts) { create_list(:post, 3, user: user) }
+  
+  # Use subject when testing the class directly
+  subject { described_class.new(attributes) }
+end
+```
+
+### 2. Test Organization
+```ruby
+RSpec.describe UserService do
+  # Group by method or functionality
+  describe "#process" do
+    # Context describes the state
+    context "with valid parameters" do
+      it "processes the user data"
+    end
+    
+    context "with invalid parameters" do
+      it "raises an error"
+    end
+  end
+end
+```
+
+### 3. Shared Examples
+```ruby
+# spec/support/shared_examples/trackable.rb
+RSpec.shared_examples "trackable" do
+  it { is_expected.to have_db_column(:created_at) }
+  it { is_expected.to have_db_column(:updated_at) }
+end
+
+# In your spec file
+RSpec.describe User do
+  it_behaves_like "trackable"
+end
+```
+
+### 4. Custom Matchers
+```ruby
+# spec/support/matchers/be_recent.rb
+RSpec::Matchers.define :be_recent do
+  match do |actual|
+    actual.created_at >= 1.hour.ago
+  end
+end
+
+# In your spec
+it "creates a recent record" do
+  expect(create(:user)).to be_recent
+end
+```
+
+## Model Specs
+
+```ruby
+RSpec.describe User do
+  # 1. Database columns and indices
+  it { is_expected.to have_db_column(:email).of_type(:string) }
+  it { is_expected.to have_db_index(:email).unique }
+  
+  # 2. Validations
+  it { is_expected.to validate_presence_of(:email) }
+  it { is_expected.to validate_uniqueness_of(:email) }
+  
+  # 3. Associations
+  it { is_expected.to belong_to(:organization) }
+  it { is_expected.to have_many(:posts).dependent(:destroy) }
+  
+  # 4. Scopes
+  describe ".active" do
+    it "returns only active users"
+  end
+  
+  # 5. Instance methods
+  describe "#full_name" do
+    it "combines first and last name"
+  end
+end
+```
+
+## Controller Specs
+
+```ruby
+RSpec.describe UsersController do
+  describe "GET #index" do
+    context "when user is authenticated" do
+      before { sign_in create(:user) }
+      
+      it "returns successful response" do
+        get :index
+        expect(response).to be_successful
+      end
+    end
+  end
+  
+  describe "POST #create" do
+    context "with valid parameters" do
+      let(:valid_params) { { user: attributes_for(:user) } }
+      
+      it "creates a new user" do
+        expect {
+          post :create, params: valid_params
+        }.to change(User, :count).by(1)
+      end
+    end
+  end
+end
+```
+
+## Request Specs
+
+```ruby
+RSpec.describe "Users API" do
+  describe "GET /api/users" do
+    it "returns list of users" do
+      create_list(:user, 3)
+      
+      get "/api/users"
+      
+      expect(response).to have_http_status(:ok)
+      expect(json_response.size).to eq(3)
+    end
+  end
+end
+```
+
+## Service Specs
+
+```ruby
+RSpec.describe UserService do
+  describe "#process" do
+    let(:service) { described_class.new(params) }
+    
+    context "when successful" do
+      let(:params) { { email: "test@example.com" } }
+      
+      it "processes the user data" do
+        result = service.process
+        expect(result).to be_success
+      end
+    end
+  end
+end
+```
+
+## Test Performance
+
+### Do's
+- Use `build` instead of `create` when possible
+- Use `build_stubbed` for complex objects
+- Use `let` for memoization
+- Use database cleaner strategies wisely
+
+### Don'ts
+- Don't test private methods directly
+- Don't use `let!` unless necessary
+- Don't create unnecessary database records
+- Don't test implementation details
+
+## Running Tests
+
+### Basic Commands
+```bash
+# Run all specs
+bundle exec rspec
+
+# Run specific file
+bundle exec rspec spec/models/user_spec.rb
+
+# Run specific line
+bundle exec rspec spec/models/user_spec.rb:25
+
+# Run with documentation format
+bundle exec rspec --format documentation
+```
+
+### Tags and Filters
+```ruby
+# In your spec
+it "does something", :focus do
+  # test
+end
+
+# Run only focused specs
+bundle exec rspec --tag focus
+
+# Exclude slow specs
+bundle exec rspec --tag ~slow
+``` 
